@@ -146,6 +146,27 @@ function typeOutText(element,text,delay=150,callback){
 }
 
 // --- SIMULATION ANZEIGE ---
+function animateNumbers(element, finalNumbers, duration, callback) {
+  const startTime = Date.now();
+  const interval = 50; // Zeit zwischen den Zufallszahlen
+  let intervalId;
+
+  function generateRandomNumbers(count, max) {
+    return Array.from({length: count}, () => Math.floor(Math.random() * max) + 1).sort((a,b) => a-b);
+  }
+
+  intervalId = setInterval(() => {
+    if (Date.now() - startTime >= duration) {
+      clearInterval(intervalId);
+      element.textContent = finalNumbers.join(", ");
+      if (callback) callback();
+      return;
+    }
+    const randomNums = generateRandomNumbers(finalNumbers.length, finalNumbers.length <= 2 ? 12 : 50);
+    element.textContent = randomNums.join(", ");
+  }, interval);
+}
+
 function showNumbersStepByStep(seedInput){
   const out=document.getElementById('output');
   const loading=document.getElementById('loading');
@@ -158,13 +179,29 @@ function showNumbersStepByStep(seedInput){
       setTimeout(()=>{
         typeOutText(out,"Nächste Ziehung: "+drawDateStr,50,()=>{
           setTimeout(()=>{
-            typeOutText(out,"Hauptzahlen: "+nums.main.join(", "),150,()=>{
-              setTimeout(()=>{
-                typeOutText(out,"Eurozahlen: "+nums.euro.join(", "),150,()=>{
+            const mainSpan = document.createElement('span');
+            mainSpan.className = 'numbers';
+            mainSpan.textContent = "Hauptzahlen: ";
+            out.appendChild(mainSpan);
+            const mainNumSpan = document.createElement('span');
+            mainSpan.appendChild(mainNumSpan);
+            
+            // Animiere Hauptzahlen
+            animateNumbers(mainNumSpan, nums.main, 2000, () => {
+              setTimeout(() => {
+                const euroSpan = document.createElement('span');
+                euroSpan.className = 'numbers';
+                euroSpan.textContent = "Eurozahlen: ";
+                out.appendChild(euroSpan);
+                const euroNumSpan = document.createElement('span');
+                euroSpan.appendChild(euroNumSpan);
+                
+                // Animiere Eurozahlen
+                animateNumbers(euroNumSpan, nums.euro, 2000, () => {
                   loading.style.display='none';
                   playVictorySound();
                 });
-              },500);
+              }, 500);
             });
           },300);
         });
