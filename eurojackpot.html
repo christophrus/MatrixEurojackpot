@@ -200,6 +200,8 @@ function showNumbersStepByStep(seedInput){
                 animateNumbers(euroNumSpan, nums.euro, 2000, () => {
                   loading.style.display='none';
                   playVictorySound();
+                  // Entferne alle blinkenden Cursor
+                  document.querySelectorAll('.cursor').forEach(cursor => cursor.remove());
                 });
               }, 500);
             });
