@@ -42,7 +42,12 @@ const fontSize = 16;
 const columns = Math.floor(canvas.width / fontSize);
 const drops = Array(columns).fill(1);
 const chars = '01';
+let matrixFrameCount = 0; // number of drawMatrix frames executed (used to detect warmup)
+// Track which columns have reached the bottom at least once
+const columnsReachedBottom = Array(columns).fill(false);
+let matrixWarmupComplete = false; // becomes true when all columns reached bottom
 function drawMatrix(){
+  matrixFrameCount++;
   ctx.fillStyle='rgba(0,0,0,0.05)';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle='#00ff00';
@@ -50,8 +55,18 @@ function drawMatrix(){
   for(let i=0;i<drops.length;i++){
     const text = chars.charAt(Math.floor(Math.random()*chars.length));
     ctx.fillText(text,i*fontSize,drops[i]*fontSize);
-    if(drops[i]*fontSize>canvas.height && Math.random()>0.975){drops[i]=0;}
+    if(drops[i]*fontSize>canvas.height){
+      // mark this column as having reached the bottom
+      columnsReachedBottom[i] = true;
+      // small random chance to reset so the effect continues
+      if (Math.random() > 0.975) { drops[i] = 0; }
+    }
     drops[i]++;
+  }
+  // once every column reached bottom at least once, mark warmup complete
+  if (!matrixWarmupComplete && columnsReachedBottom.every(Boolean)) {
+    matrixWarmupComplete = true;
+    console.debug('[drawMatrix] matrix warmup: all columns reached bottom');
   }
 }
 
@@ -320,7 +335,21 @@ document.getElementById('startButton').addEventListener('click',async ()=>{
   console.debug('[start] Clicked start, seedInput:', seedInput);
   await loadCSV(); // CSV laden
   console.debug('[start] CSV loaded, history length:', history.length);
-  setInterval(drawMatrix,50);
+  // Start matrix rain first and wait until it has warmed up before showing text
+  const matrixInterval = setInterval(drawMatrix,50);
+  console.debug('[start] matrix rain started, waiting for warmup...');
+  // wait until the matrix rain has filled the screen (all columns reached bottom once)
+  await new Promise(resolve => {
+    const maxWait = 5000; // safety timeout
+    const start = Date.now();
+    const check = setInterval(() => {
+      if (matrixWarmupComplete || Date.now() - start > maxWait) {
+        clearInterval(check);
+        console.debug('[start] matrix warmup complete (or timeout). frames:', matrixFrameCount, 'warmup:', matrixWarmupComplete);
+        resolve();
+      }
+    }, 100);
+  });
   try {
     await showNumbersStepByStep(seedInput);
     console.debug('[start] showNumbersStepByStep completed');
