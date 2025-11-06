@@ -58,58 +58,122 @@ function drawMatrix(){
 // --- CSV HISTORIE LADEN ---
 let history = [];
 async function loadCSV() {
+  console.debug('[loadCSV] Start loading history.csv');
   const response = await fetch('history.csv');
   const text = await response.text();
   const lines = text.trim().split('\n');
-  lines.forEach(line => {
-    const [date, ...nums] = line.split(',');
-    const main = nums.slice(0,5).map(Number);
-    const euro = nums.slice(5,7).map(Number);
-    history.push({main,euro,date});
-  });
+  console.debug('[loadCSV] CSV loaded, total lines:', lines.length);
+
+  // Chunked parsing to avoid blocking the UI for large files
+  const chunkSize = 200;
+  for (let i = 0; i < lines.length; i += chunkSize) {
+    const end = Math.min(i + chunkSize, lines.length);
+    for (let j = i; j < end; j++) {
+      const line = lines[j];
+      const [date, ...nums] = line.split(',');
+      // defensives Parsen: trim und Number, prüfe auf NaN
+      const main = nums.slice(0,5).map(s => {
+        const v = Number((s||'').trim());
+        return Number.isFinite(v) ? v : NaN;
+      });
+      const euro = nums.slice(5,7).map(s => {
+        const v = Number((s||'').trim());
+        return Number.isFinite(v) ? v : NaN;
+      });
+      // Prüfe, ob die erwarteten Werte vorhanden sind
+      const hasAllMain = main.length === 5 && main.every(Number.isFinite);
+      const hasAllEuro = euro.length === 2 && euro.every(Number.isFinite);
+      if (!hasAllMain || !hasAllEuro) {
+        console.warn('[loadCSV] skipped malformed line', j + 1, 'content:', line);
+        continue; // skip malformed line
+      }
+      history.push({main,euro,date});
+    }
+    console.debug('[loadCSV] Parsed lines', Math.min(end, lines.length), 'of', lines.length);
+    // yield to the event loop so the UI stays responsive
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+  console.debug('[loadCSV] Finished parsing history, history length:', history.length);
 }
 
 // --- MATRIX-DETERMINISTISCHE VORHERSAGE MIT SEED ---
-function generateDeterministicNumbers(drawDateStr, history, seedInput) {
-    const drawDate = new Date(drawDateStr);
-    const year = drawDate.getFullYear();
-    const month = drawDate.getMonth() + 1;
-    const day = drawDate.getDate();
-    const weekday = drawDate.getDay();
-    const last5 = history.slice(-5);
-    const prevSum = last5.reduce((sum, draw) => sum + draw.main.reduce((a,b)=>a+b,0) + draw.euro.reduce((a,b)=>a+b,0),0);
-    
-    // Verbesserte Seed-Berechnung die die Position der Zeichen berücksichtigt
-    const seedNum = seedInput ? seedInput.split('').reduce((acc, c, i) => {
-        // Verwende Position (i+1) als Multiplikator und addiere eine Primzahl pro Position
-        return acc + (c.charCodeAt(0) * (i + 1) * 31);
-    }, 0) : 0;
+// Diese Version nutzt ALLE historischen Einträge aus `history`.
+// Für sehr große CSVs wird die Summenberechnung in Chunks ausgeführt
+// (mit kurzen Pausen) damit der Browser nicht einfriert.
+async function generateDeterministicNumbers(drawDateStr, history, seedInput) {
+  console.debug('[generate] start', { drawDateStr, historyLength: history.length, seedProvided: !!seedInput });
+  const drawDate = new Date(drawDateStr);
+  const year = drawDate.getFullYear();
+  const month = drawDate.getMonth() + 1;
+  const day = drawDate.getDate();
+  const weekday = drawDate.getDay();
 
-    const main = [];
-    const euro = [];
-
-    function pseudoRandom(seed, range) {
-        let x = Math.sin(seed) * 10000;
-        return Math.floor(Math.abs(x) % range) + 1;
+  // Berechne die Summe aller bisherigen Ziehungen asynchron in Chunks
+  let prevSum = 0;
+  const n = history.length;
+  console.debug('[generate] history length =', n);
+  // Wenn history moderat groß ist, mache eine direkte Reduktion (schnell)
+  if (n <= 500) {
+    prevSum = history.reduce((sum, draw) => sum + draw.main.reduce((a,b)=>a+b,0) + draw.euro.reduce((a,b)=>a+b,0), 0);
+    console.debug('[generate] prevSum computed (direct):', prevSum);
+  } else {
+    // Chunking für große Arrays: verarbeite z.B. 200 Einträge, dann yield
+    const chunkSize = 200;
+    for (let i = 0; i < n; i += chunkSize) {
+      const end = Math.min(i + chunkSize, n);
+      for (let j = i; j < end; j++) {
+        const draw = history[j];
+        // sichere Summierung: ignoriere nicht-finite Werte (falls doch vorhanden)
+        const mainSum = (draw.main || []).reduce((a,b) => a + (Number.isFinite(b) ? b : 0), 0);
+        const euroSum = (draw.euro || []).reduce((a,b) => a + (Number.isFinite(b) ? b : 0), 0);
+        prevSum += mainSum + euroSum;
+        // Falls irgendwas ungewöhnlich ist, logge die Zeile zur Untersuchung
+        if (!Array.isArray(draw.main) || !Array.isArray(draw.euro) || draw.main.length !==5 || draw.euro.length !==2) {
+          console.warn('[generate] unexpected draw format at index', j, draw);
+        }
+      }
+      console.debug('[generate] processed chunk', Math.min(end, n), 'of', n, 'current prevSum:', prevSum);
+      // Kurz pausieren, damit der UI-Thread Events verarbeiten kann
+      // (wichtig bei ~900 Einträgen oder mehr)
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
+    console.debug('[generate] prevSum computed (chunked):', prevSum);
+  }
 
-    for(let i=0; i<5; i++){
-        const seed = year*10000 + month*100 + day + weekday*7 + prevSum + seedNum + i*37;
-        let num = pseudoRandom(seed,50);
-        while(main.includes(num)) num = (num % 50) + 1;
-        main.push(num);
-    }
+  // Verbesserte Seed-Berechnung die die Position der Zeichen berücksichtigt
+  const seedNum = seedInput ? seedInput.split('').reduce((acc, c, i) => {
+    // Verwende Position (i+1) als Multiplikator und addiere eine Primzahl pro Position
+    return acc + (c.charCodeAt(0) * (i + 1) * 31);
+  }, 0) : 0;
+  console.debug('[generate] seedNum =', seedNum);
 
-    for(let i=0; i<2; i++){
-        const seed = year*10000 + month*100 + day + weekday*3 + prevSum + seedNum + i*13;
-        let num = pseudoRandom(seed,12);
-        while(euro.includes(num)) num = (num % 12) + 1;
-        euro.push(num);
-    }
+  const main = [];
+  const euro = [];
 
-    main.sort((a,b)=>a-b);
-    euro.sort((a,b)=>a-b);
-    return {main,euro};
+  function pseudoRandom(seed, range) {
+    let x = Math.sin(seed) * 10000;
+    return Math.floor(Math.abs(x) % range) + 1;
+  }
+
+  for(let i=0; i<5; i++){
+    const seed = year*10000 + month*100 + day + weekday*7 + prevSum + seedNum + i*37;
+    let num = pseudoRandom(seed,50);
+    while(main.includes(num)) num = (num % 50) + 1;
+    main.push(num);
+  }
+  console.debug('[generate] main numbers generated (pre-sort):', main);
+
+  for(let i=0; i<2; i++){
+    const seed = year*10000 + month*100 + day + weekday*3 + prevSum + seedNum + i*13;
+    let num = pseudoRandom(seed,12);
+    while(euro.includes(num)) num = (num % 12) + 1;
+    euro.push(num);
+  }
+  console.debug('[generate] euro numbers generated (pre-sort):', euro);
+
+  main.sort((a,b)=>a-b);
+  euro.sort((a,b)=>a-b);
+  return {main,euro};
 }
 
 // --- NÄCHSTES ZIEHUNGSDATUM ---
@@ -172,12 +236,14 @@ function animateNumbers(element, finalNumbers, duration, callback) {
   }, interval);
 }
 
-function showNumbersStepByStep(seedInput){
+async function showNumbersStepByStep(seedInput){
   const out=document.getElementById('output');
   const loading=document.getElementById('loading');
   loading.style.display='flex';
   const drawDateStr=nextDrawDate();
-  const nums=generateDeterministicNumbers(drawDateStr, history, seedInput);
+  console.debug('[show] before generateDeterministicNumbers, drawDateStr:', drawDateStr);
+  const nums = await generateDeterministicNumbers(drawDateStr, history, seedInput);
+  console.debug('[show] after generateDeterministicNumbers, nums:', nums);
 
   setTimeout(()=>{
     typeOutText(out,"===== MATRIX-PROGNOSE: EUROJACKPOT =====",50,()=>{
@@ -251,9 +317,17 @@ function playVictorySound(){
 document.getElementById('startButton').addEventListener('click',async ()=>{
   const seedInput = document.getElementById('seedInput').value;
   audioCtx=new AudioContext();
+  console.debug('[start] Clicked start, seedInput:', seedInput);
   await loadCSV(); // CSV laden
+  console.debug('[start] CSV loaded, history length:', history.length);
   setInterval(drawMatrix,50);
-  showNumbersStepByStep(seedInput);
+  try {
+    await showNumbersStepByStep(seedInput);
+    console.debug('[start] showNumbersStepByStep completed');
+  } catch (err) {
+    console.error('[start] Error during showNumbersStepByStep:', err);
+    throw err;
+  }
   playMatrixTheme();
   document.getElementById('controls').style.display='none';
 });
