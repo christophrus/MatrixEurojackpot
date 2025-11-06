@@ -78,7 +78,12 @@ function generateDeterministicNumbers(drawDateStr, history, seedInput) {
     const weekday = drawDate.getDay();
     const last5 = history.slice(-5);
     const prevSum = last5.reduce((sum, draw) => sum + draw.main.reduce((a,b)=>a+b,0) + draw.euro.reduce((a,b)=>a+b,0),0);
-    const seedNum = seedInput ? seedInput.split('').reduce((acc,c)=>acc + c.charCodeAt(0),0) : 0;
+    
+    // Verbesserte Seed-Berechnung die die Position der Zeichen berücksichtigt
+    const seedNum = seedInput ? seedInput.split('').reduce((acc, c, i) => {
+        // Verwende Position (i+1) als Multiplikator und addiere eine Primzahl pro Position
+        return acc + (c.charCodeAt(0) * (i + 1) * 31);
+    }, 0) : 0;
 
     const main = [];
     const euro = [];
