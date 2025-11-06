@@ -329,7 +329,7 @@ function playMatrixTone(f,d,gain=0.1){
 }
 function playMatrixTheme(){
   playMatrixTone(100,3,0.08);
-  setTimeout(()=>playMatrixTone(110,2.5,0.07),500);
+  setTimeout(()=>playMatrixTone(110,12,0.07),500);
   [400,450,500,550,600].forEach((f,i)=>setTimeout(()=>playMatrixTone(f,0.15,0.05),i*400));
 }
 function playVictorySound(){
@@ -349,6 +349,8 @@ document.getElementById('startButton').addEventListener('click',async ()=>{
   const seedInput = document.getElementById('seedInput').value;
   audioCtx=new AudioContext();
   console.debug('[start] Clicked start, seedInput:', seedInput);
+  // Hide controls immediately so UI is clean while loading
+  document.getElementById('controls').style.display='none';
   await loadCSV(); // CSV laden
   console.debug('[start] CSV loaded, history length:', history.length);
   // Start matrix rain first and wait until it has warmed up before showing text
