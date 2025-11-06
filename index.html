@@ -6,7 +6,10 @@
 <style>
 body { margin:0; background:black; color:#00ff00; font-family:monospace; overflow:hidden; }
 #matrix { position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; }
-#output { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1; white-space:pre; font-size:24px; text-align:center; color:cyan; }
+/* Centered white semi-transparent box that holds the output text. */
+#textContainer { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1; width:50%; box-sizing:border-box; padding:18px; border-radius:6px; display:none; }
+/* The actual output inside the centered box - left aligned but the box itself is centered on screen */
+#output { white-space:pre-wrap; font-size:24px; text-align:left; color:cyan; }
 .numbers { display:block; margin:10px 0; font-size:32px; font-weight:bold; color:cyan; }
 #loading { position:absolute; top:35%; left:50%; transform:translate(-50%,-50%); z-index:2; display:flex; flex-direction:column; align-items:center; color:cyan; }
 .spinner { border:5px solid rgba(0,255,255,0.2); border-top:5px solid cyan; border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite; margin-bottom:10px; }
@@ -21,7 +24,9 @@ body { margin:0; background:black; color:#00ff00; font-family:monospace; overflo
 <body>
 
 <canvas id="matrix"></canvas>
-<div id="output"></div>
+<div id="textContainer">
+  <div id="output"></div>
+</div>
 <div id="loading" style="display:none;">
   <div class="spinner"></div>
   <div>Berechne Zahlen...</div>
@@ -351,6 +356,11 @@ document.getElementById('startButton').addEventListener('click',async ()=>{
   console.debug('[start] Clicked start, seedInput:', seedInput);
   // Hide controls immediately so UI is clean while loading
   document.getElementById('controls').style.display='none';
+  // Ensure the centered text container is visible and previous output cleared
+  const textContainer = document.getElementById('textContainer');
+  const out = document.getElementById('output');
+  if (textContainer) { textContainer.style.display = 'block'; }
+  if (out) { out.textContent = ''; }
   await loadCSV(); // CSV laden
   console.debug('[start] CSV loaded, history length:', history.length);
   // Start matrix rain first and wait until it has warmed up before showing text
