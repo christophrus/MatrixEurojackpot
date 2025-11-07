@@ -73,6 +73,3 @@ Weiteres Vorgehen und Ressourcen
 
 Kontakt / Fragen
 - Falls du willst, erstelle ich daraus eine Kurz-Checkliste (1 Seite) für das Team‑Onboarding oder eine englische Version.
-
----
-*Dieses Dokument ist als praktisches Hilfsmittel gedacht — es ersetzt keine rechtliche Beratung.*
