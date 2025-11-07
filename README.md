@@ -79,12 +79,9 @@ Oder einfach die Datei `index.html` in einem Browser öffnen, falls Ihr Browser 
   - Prüfe `history.csv` auf beschädigte Zeilen. Das Skript loggt und überspringt solche Zeilen, aber wenn viele Zeilen inkorrekt sind, ändert das die Summe.
 
 ## Anpassungen — was und wo
-- `history.csv` formatieren: jede Zeile `YYYY-MM-DD,n1,n2,n3,n4,n5,e1,e2`
+- `history.csv` formatieren: jede Zeile `DD-MM-YYYY,n1,n2,n3,n4,n5,e1,e2`
 - Farben / Box-Breite: in `index.html` im `<style>`-Block `#textContainer` / `#output` anpassen (background, width, padding).
 - Längere/andere Animations-Behavior: `animateNumbers()` und `typeOutText()` anpassen.
 
 ## Sicherheit und deterministische Ethik (kurz)
 Diese Demo ist rein illustrativ. Determinismus und Vorhersage sind künstlerische/technische Spielereien — in der echten Welt sind Lotterien zufällig und reguliert.
-
----
-Wenn du möchtest, erstelle ich eine englische Fassung der README, füge Badges hinzu oder passe die Box-Optik (z.B. Fade-In) an. Außerdem kann ich den Lade-Spinner in die weiße Box verschieben, wenn du das bevorzugst.
