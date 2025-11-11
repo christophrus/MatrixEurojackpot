@@ -35,13 +35,18 @@ body { margin:0; background:black; color:#00ff00; font-family:monospace; overflo
 
 .cursor {
   display: inline-block;
-  width: 10px;
+  width: 2px;
+  height: 1em;              /* gleiche Höhe wie Textzeile */
   background-color: #00ff00;
   margin-left: 2px;
+  vertical-align: bottom;   /* ausgerichtet zur Textbasis */
   animation: blink 0.7s steps(1) infinite;
 }
 
-@keyframes blink { 50% { opacity:0; } }
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
 
 .mainnumbers { display:block; margin-top:25px; }
 .euronumbers { display:block; margin-top:2px; }
@@ -50,8 +55,6 @@ body { margin:0; background:black; color:#00ff00; font-family:monospace; overflo
 @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform:rotate(360deg);} }
 #startButton { font-size:20px; padding:10px 20px; cursor:pointer; margin-top:10px; }
 #seedInput { font-size:18px; padding:5px; width:200px; margin-bottom:10px; }
-.cursor { display:inline-block; width:10px; animation:blink 0.7s steps(1) infinite; }
-@keyframes blink { 50% { opacity:0; } }
 #controls { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:3; display:flex; flex-direction:column; align-items:center; }
 </style>
 </head>
