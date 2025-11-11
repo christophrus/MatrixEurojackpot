@@ -85,3 +85,4 @@ Oder einfach die Datei `index.html` in einem Browser öffnen, falls Ihr Browser 
 
 ## Sicherheit und deterministische Ethik (kurz)
 Diese Demo ist rein illustrativ. Determinismus und Vorhersage sind künstlerische/technische Spielereien — in der echten Welt sind Lotterien zufällig und reguliert.
+[Detailierte Ausführungen](ETHICS.md)
