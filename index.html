@@ -212,20 +212,37 @@ async function generateDeterministicNumbers(drawDateStr, history, seedInput) {
   return {main,euro};
 }
 
-// --- NÄCHSTES ZIEHUNGSDATUM ---
 function nextDrawDate(){
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const drawDays = [2,5]; // Dienstag, Freitag
-  let diffs = drawDays.map(d=>((d-dayOfWeek+7)%7));
-  diffs.sort((a,b)=>a-b);
-  let nextDiff = diffs[0];
-  if(drawDays.includes(dayOfWeek) && today.getHours()<21){nextDiff=0;}
-  const nextDraw = new Date(today);
-  nextDraw.setDate(today.getDate()+nextDiff);
-  nextDraw.setHours(21,0,0,0);
-  return nextDraw.toLocaleString('de-DE',{weekday:'long', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  const now = new Date();
+  const drawDays = [2,5]; // Dienstag (2), Freitag (5)
+
+  for (let delta = 0; delta <= 7; delta++) {
+    const candidate = new Date(now);
+    candidate.setDate(now.getDate() + delta);
+    const dow = candidate.getDay();
+    if (!drawDays.includes(dow)) continue;
+
+    if (delta === 0) {
+      const h = now.getHours();
+      const m = now.getMinutes();
+      if (h < 21 || (h === 21 && m === 0)) {
+        candidate.setHours(21,0,0,0);
+        return candidate; // RETURN Date-Objekt
+      }
+      continue;
+    }
+
+    candidate.setHours(21,0,0,0);
+    return candidate; // RETURN Date-Objekt
+  }
+
+  // fallback Dienstag nächster Woche
+  const fallback = new Date(now);
+  fallback.setDate(now.getDate() + ((9 - now.getDay()) % 7));
+  fallback.setHours(21,0,0,0);
+  return fallback; // RETURN Date-Objekt
 }
+
 
 // --- TIPPEFFEKT ---
 let lastCursor=null;
@@ -276,9 +293,10 @@ async function showNumbersStepByStep(seedInput){
   const out=document.getElementById('output');
   const loading=document.getElementById('loading');
   loading.style.display='flex';
-  const drawDateStr=nextDrawDate();
-  console.debug('[show] before generateDeterministicNumbers, drawDateStr:', drawDateStr);
-  const nums = await generateDeterministicNumbers(drawDateStr, history, seedInput);
+  const drawDate = nextDrawDate();
+  const drawDateStr = drawDate.toLocaleString('de-DE', {weekday:'long', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  console.debug('[show] before generateDeterministicNumbers, drawDate:', drawDate);
+  const nums = await generateDeterministicNumbers(drawDate, history, seedInput);
   console.debug('[show] after generateDeterministicNumbers, nums:', nums);
 
   setTimeout(()=>{
