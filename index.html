@@ -46,7 +46,6 @@ body { margin:0; background:black; color:#00ff00; font-family:monospace; overflo
 .mainnumbers { display:block; margin-top:25px; }
 .euronumbers { display:block; margin-top:2px; }
 
-#loading { position:absolute; top:10%; left:50%; transform:translate(-50%,-50%); z-index:2; display:flex; flex-direction:column; align-items:center; color:cyan; }
 .spinner { border:5px solid rgba(0,255,255,0.2); border-top:5px solid cyan; border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite; margin-bottom:10px; }
 @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform:rotate(360deg);} }
 #startButton { font-size:20px; padding:10px 20px; cursor:pointer; margin-top:10px; }
@@ -61,10 +60,6 @@ body { margin:0; background:black; color:#00ff00; font-family:monospace; overflo
 <canvas id="matrix"></canvas>
 <div id="textContainer">
   <div id="output"></div>
-</div>
-<div id="loading" style="display:none;">
-  <div class="spinner"></div>
-  <div>Berechne Zahlen...</div>
 </div>
 
 <div id="controls">
@@ -332,8 +327,6 @@ function animateNumbers(element, finalNumbers, duration, callback) {
 
 async function showNumbersStepByStep(seedInput){
   const out=document.getElementById('output');
-  const loading=document.getElementById('loading');
-  loading.style.display='flex';
   textContainer.style.display = 'block';
   const drawDate = nextDrawDate();
   const drawDateStr = drawDate.toLocaleString('de-DE', {weekday:'long', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) + ' Uhr';
@@ -365,7 +358,6 @@ async function showNumbersStepByStep(seedInput){
                 
                 // Animiere Eurozahlen
                 animateNumbers(euroNumSpan, nums.euro, 2000, () => {
-                  loading.style.display='none';
                   playVictorySound();
                   // Entferne alle blinkenden Cursor
                   document.querySelectorAll('.cursor').forEach(cursor => cursor.remove());
