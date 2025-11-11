@@ -6,12 +6,47 @@
 <style>
 body { margin:0; background:black; color:#00ff00; font-family:monospace; overflow:hidden; }
 #matrix { position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; }
-/* Centered white semi-transparent box that holds the output text. */
-#textContainer { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1; width:50%; box-sizing:border-box; padding:18px; border-radius:6px; display:none; }
-/* The actual output inside the centered box - left aligned but the box itself is centered on screen */
-#output { white-space:pre-wrap; font-size:24px; text-align:left; color:cyan; }
-.numbers { display:block; margin:10px 0; font-size:32px; font-weight:bold; color:cyan; }
-#loading { position:absolute; top:35%; left:50%; transform:translate(-50%,-50%); z-index:2; display:flex; flex-direction:column; align-items:center; color:cyan; }
+/* Terminal-Style Output */
+#textContainer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  width: 60%;
+  max-width: 800px;
+  height: 400px;
+  padding: 20px;
+  background-color: rgba(0,0,0,0.95);
+  border-radius: 6px;
+  box-shadow: 0 0 20px rgba(0,255,0,0.3);
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  color: #00ff00;
+  border: 2px solid #00ff00;
+  display: none;
+}
+
+#output {
+  white-space: pre-wrap;
+  font-size: 18px;
+  line-height: 1.4em;
+}
+
+.cursor {
+  display: inline-block;
+  width: 10px;
+  background-color: #00ff00;
+  margin-left: 2px;
+  animation: blink 0.7s steps(1) infinite;
+}
+
+@keyframes blink { 50% { opacity:0; } }
+
+.mainnumbers { display:block; margin-top:25px; }
+.euronumbers { display:block; margin-top:2px; }
+
+#loading { position:absolute; top:10%; left:50%; transform:translate(-50%,-50%); z-index:2; display:flex; flex-direction:column; align-items:center; color:cyan; }
 .spinner { border:5px solid rgba(0,255,255,0.2); border-top:5px solid cyan; border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite; margin-bottom:10px; }
 @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform:rotate(360deg);} }
 #startButton { font-size:20px; padding:10px 20px; cursor:pointer; margin-top:10px; }
@@ -245,25 +280,31 @@ function nextDrawDate(){
 
 
 // --- TIPPEFFEKT ---
-let lastCursor=null;
-function typeOutText(element,text,delay=150,callback){
-  let i=0;
+let lastCursor = null;
+
+function typeOutText(element, text, delay = 100, callback){
+  let i = 0;
   const lineSpan = document.createElement('span');
-  lineSpan.className='numbers';
   element.appendChild(lineSpan);
+  
   if(lastCursor) lastCursor.remove();
-  const cursorSpan=document.createElement('span');
-  cursorSpan.className='cursor';
-  cursorSpan.textContent='_';
+  
+  const cursorSpan = document.createElement('span');
+  cursorSpan.className = 'cursor';
   lineSpan.appendChild(cursorSpan);
   lastCursor = cursorSpan;
+  
   function typeChar(){
-    if(i<text.length){
-      cursorSpan.insertAdjacentText('beforebegin',text[i]);
+    if(i < text.length){
+      cursorSpan.insertAdjacentText('beforebegin', text[i]);
       i++;
-      setTimeout(typeChar,delay);
-    }else{ if(callback) callback(); }
+      element.scrollTop = element.scrollHeight; // scroll automatisch nach unten
+      setTimeout(typeChar, delay);
+    } else {
+      if(callback) callback();
+    }
   }
+  
   typeChar();
 }
 
@@ -293,6 +334,7 @@ async function showNumbersStepByStep(seedInput){
   const out=document.getElementById('output');
   const loading=document.getElementById('loading');
   loading.style.display='flex';
+  textContainer.style.display = 'block';
   const drawDate = nextDrawDate();
   const drawDateStr = drawDate.toLocaleString('de-DE', {weekday:'long', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) + ' Uhr';
   console.debug('[show] before generateDeterministicNumbers, drawDate:', drawDate);
@@ -300,13 +342,13 @@ async function showNumbersStepByStep(seedInput){
   console.debug('[show] after generateDeterministicNumbers, nums:', nums);
 
   setTimeout(()=>{
-    typeOutText(out,"===== MATRIX-PROGNOSE: EUROJACKPOT =====",50,()=>{
+    typeOutText(out,"# ===== MATRIX-PROGNOSE: EUROJACKPOT =====\n",50,()=>{
       setTimeout(()=>{
-        typeOutText(out,"Nächste Ziehung: "+drawDateStr,50,()=>{
+        typeOutText(out,"# Nächste Ziehung: "+drawDateStr,50,()=>{
           setTimeout(()=>{
             const mainSpan = document.createElement('span');
-            mainSpan.className = 'numbers';
-            mainSpan.textContent = "Hauptzahlen: ";
+            mainSpan.className = 'mainnumbers';
+            mainSpan.textContent = "# Hauptzahlen: ";
             out.appendChild(mainSpan);
             const mainNumSpan = document.createElement('span');
             mainSpan.appendChild(mainNumSpan);
@@ -315,8 +357,8 @@ async function showNumbersStepByStep(seedInput){
             animateNumbers(mainNumSpan, nums.main, 2000, () => {
               setTimeout(() => {
                 const euroSpan = document.createElement('span');
-                euroSpan.className = 'numbers';
-                euroSpan.textContent = "Eurozahlen: ";
+                euroSpan.className = 'euronumbers';
+                euroSpan.textContent = "# Eurozahlen: ";
                 out.appendChild(euroSpan);
                 const euroNumSpan = document.createElement('span');
                 euroSpan.appendChild(euroNumSpan);
@@ -377,7 +419,6 @@ document.getElementById('startButton').addEventListener('click',async ()=>{
   // Ensure the centered text container is visible and previous output cleared
   const textContainer = document.getElementById('textContainer');
   const out = document.getElementById('output');
-  if (textContainer) { textContainer.style.display = 'block'; }
   if (out) { out.textContent = ''; }
   await loadCSV(); // CSV laden
   console.debug('[start] CSV loaded, history length:', history.length);
