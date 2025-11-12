@@ -1,6 +1,7 @@
 name: history_scraper_update.py
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 22 * * 2,5' # At 22:00 on Tuesday and Friday
 
