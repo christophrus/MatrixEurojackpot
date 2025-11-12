@@ -121,15 +121,15 @@ def main():
     # Nach Datum sortieren
     all_results.sort(key=lambda r: parse_date(r[0]) or date.min)
 
-    # CSV schreiben
-    header = ["Date", "Main1", "Main2", "Main3", "Main4", "Main5", "Euro1", "Euro2"]
-    with open(CSV_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        writer.writerows(all_results)
+    # Nur neue Einträge anhängen
+    if new_entries:
+        with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerows(new_entries)
+        print(f"Neue Einträge an '{CSV_FILE}' angehängt: {len(new_entries)}")
+    else:
+        print("Keine neuen Einträge zum Anhängen gefunden.")
 
-    print(f"CSV '{CSV_FILE}' aktualisiert. Gesamt: {len(all_results)} Einträge.")
-    print(f"Neu hinzugefügt: {len(new_entries)} Ziehungen.")
 
 if __name__ == "__main__":
     main()
