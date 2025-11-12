@@ -10,13 +10,12 @@ BASE_URL = "https://www.beatlottery.co.uk/eurojackpot/draw-history"
 CSV_FILE = "history.csv"
 
 def get_latest_year_from_website():
-    """Findet das aktuellste verfügbare Jahr direkt auf der Website."""
+    """Findet das aktuellste Jahr direkt auf der Website über den gegebenen XPath."""
     print(f"Ermittle aktuellstes Jahr von {BASE_URL} …")
     resp = requests.get(BASE_URL, headers=HEADERS)
     resp.raise_for_status()
     resp.encoding = "utf-8"
     tree = html.fromstring(resp.text)
-    # XPath laut Vorgabe:
     year_text = tree.xpath('/html/body/section/div/div/div/div/div[1]/div/div/div/div/article/div/div[2]/div[1]/div/div/a[1]/text()')
     if not year_text:
         raise RuntimeError("Konnte aktuelles Jahr nicht auf der Website finden.")
@@ -24,8 +23,8 @@ def get_latest_year_from_website():
     print(f"Aktuellstes Jahr laut Website: {year}")
     return year
 
-
 def scrape_year(year):
+    """Scrapt die Ziehungen eines Jahres und gibt sie als Liste zurück."""
     url = f"{BASE_URL}/year/{year}"
     print(f"Lade Jahr {year} … ({url})")
     resp = requests.get(url, headers=HEADERS)
@@ -49,8 +48,8 @@ def scrape_year(year):
             print(f"  Fehler beim Parsen einer Zeile: {e}")
     return results
 
-
 def parse_date(date_text):
+    """Versucht, ein Datum aus einem String zu parsen."""
     if not date_text:
         return None
     s = date_text.strip().replace('.', '/').replace('-', '/')
@@ -73,9 +72,8 @@ def parse_date(date_text):
             return None
     return None
 
-
 def load_existing_results():
-    """Lade vorhandene history.csv, falls vorhanden."""
+    """Lädt vorhandene CSV, falls vorhanden."""
     if not os.path.exists(CSV_FILE):
         return []
     with open(CSV_FILE, "r", encoding="utf-8") as f:
@@ -85,9 +83,8 @@ def load_existing_results():
         return []
     return rows[1:]  # Header überspringen
 
-
 def main():
-    # Vorhandene Daten laden
+    # Bestehende CSV laden
     existing = load_existing_results()
     existing_dates = {r[0].strip() for r in existing}
     print(f"Vorhandene Einträge: {len(existing_dates)}")
@@ -102,34 +99,25 @@ def main():
     # Nur dieses Jahr scrapen
     try:
         year_results = scrape_year(latest_year)
-        new_entries = []
-        for r in year_results:
-            if r[0].strip() not in existing_dates:
-                new_entries.append(r)
-                print(f"  ➕ Neuer Eintrag: {r[0]}")
     except Exception as e:
         print(f"Fehler beim Scrapen von Jahr {latest_year}: {e}")
         return
 
-    if not new_entries:
-        print("Keine neuen Einträge gefunden.")
-        return
+    # Neue Einträge bestimmen
+    new_entries = [r for r in year_results if r[0].strip() not in existing_dates]
 
-    # Alles zusammenführen
-    all_results = existing + new_entries
-
-    # Nach Datum sortieren
-    all_results.sort(key=lambda r: parse_date(r[0]) or date.min)
-
-    # Nur neue Einträge anhängen
     if new_entries:
+        # Neue Einträge sortieren (älteste zuerst)
+        new_entries.sort(key=lambda r: parse_date(r[0]) or date.min)
+
+        # Neue Einträge ans Ende der CSV anhängen
         with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerows(new_entries)
-        print(f"Neue Einträge an '{CSV_FILE}' angehängt: {len(new_entries)}")
+
+        print(f"{len(new_entries)} neue Einträge sortiert angehängt.")
     else:
         print("Keine neuen Einträge zum Anhängen gefunden.")
-
 
 if __name__ == "__main__":
     main()
