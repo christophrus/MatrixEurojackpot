@@ -1,4 +1,5 @@
 # Matrix-Eurojackpot
+![screenshot](screenshot.jpg)
 
 Eine kleine, spielerische Simulation/Visualisierung: die Ziehungsvorhersage für Eurojackpot, präsentiert als "Matrix-Computer" Simulation. Diese README erklärt, wie das Skript funktioniert, wie man es startet und welche Mechaniken (CSV, Seed, deterministische Zufallsfunktion, Warmup) dahinterstecken — unter der Prämisse, dass wir in einer deterministischen Matrix-Computer-Simulation leben.
 
