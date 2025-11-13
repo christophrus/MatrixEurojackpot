@@ -179,6 +179,7 @@ async function generateDeterministicNumbers(drawDateStr, history, seedInput){
     console.debug('[generate] prevSum computed (chunked):', prevSum);
   }
 
+  // Verbesserte Seed-Berechnung die die Position der Zeichen berücksichtigt
   const seedNum = seedInput ? seedInput.split('').reduce((acc,c,i)=> acc + (c.charCodeAt(0)*(i+1)*31),0) : 0;
   console.debug('[generate] seedNum =', seedNum);
 
@@ -209,9 +210,6 @@ async function generateDeterministicNumbers(drawDateStr, history, seedInput){
   euro.sort((a,b)=>a-b);
   return {main, euro, esoteric};
 }
-
-// --- Weitere bestehende Funktionen (nextDrawDate, typeOutText, animateNumbers, showNumbersStepByStep, Audio, Start Button) unverändert ---
-
 
 function nextDrawDate(){
   const now = new Date();
