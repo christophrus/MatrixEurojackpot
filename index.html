@@ -36,17 +36,16 @@ body { margin:0; background:black; color:#00ff00; font-family:monospace; overflo
 .cursor {
   display: inline-block;
   width: 2px;
-  height: 1em;              /* gleiche Höhe wie Textzeile */
+  height: 1em;
   background-color: #00ff00;
   margin-left: 2px;
-  vertical-align: bottom;   /* ausgerichtet zur Textbasis */
+  vertical-align: bottom;
   animation: blink 0.7s steps(1) infinite;
 }
 
 @keyframes blink {
   50% { opacity: 0; }
 }
-
 
 .mainnumbers { display:block; margin-top:25px; }
 .euronumbers { display:block; margin-top:2px; }
@@ -57,6 +56,10 @@ body { margin:0; background:black; color:#00ff00; font-family:monospace; overflo
 #seedInput { font-size:18px; padding:5px; width:200px; margin-bottom:10px; }
 #controls { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:3; display:flex; flex-direction:column; align-items:center; }
 </style>
+
+<!-- Externe Esoterik-Faktoren -->
+<script type="module" src="matrixEsotericFactors.js"></script>
+
 </head>
 <body>
 
@@ -70,7 +73,9 @@ body { margin:0; background:black; color:#00ff00; font-family:monospace; overflo
   <button id="startButton">Start Simulation</button>
 </div>
 
-<script>
+<script type="module">
+import { getEsotericSeedComponents } from './matrixEsotericFactors.js';
+
 // --- MATRIX HINTERGRUND ---
 const canvas = document.getElementById('matrix');
 const ctx = canvas.getContext('2d');
@@ -80,26 +85,20 @@ const fontSize = 16;
 const columns = Math.floor(canvas.width / fontSize);
 const drops = Array(columns).fill(1);
 const chars = '01';
-let matrixFrameCount = 0; // number of drawMatrix frames executed (used to detect warmup)
-// Track which columns have reached the bottom at least once
+let matrixFrameCount = 0;
 const columnsReachedBottom = Array(columns).fill(false);
-let matrixWarmupComplete = false; // becomes true when all columns reached bottom
-// Warmup sound controller
+let matrixWarmupComplete = false;
 let warmupSoundInterval = null;
+
 function startWarmupSound(){
   if (!audioCtx) return;
-  // play a soft repeating tone until warmup completes
   warmupSoundInterval = setInterval(()=>{
-    if (matrixWarmupComplete) return; // stop scheduling new tones
-    try{
-      // gentle descending tones
-      playMatrixTone(300 + Math.random()*200, 0.25, 0.03);
-    }catch(e){ console.warn('warmup sound failed', e); }
+    if (matrixWarmupComplete) return;
+    try{ playMatrixTone(300 + Math.random()*200, 0.25, 0.03); }catch(e){ console.warn('warmup sound failed', e); }
   }, 300);
 }
-function stopWarmupSound(){
-  if (warmupSoundInterval) { clearInterval(warmupSoundInterval); warmupSoundInterval = null; }
-}
+function stopWarmupSound(){ if(warmupSoundInterval){ clearInterval(warmupSoundInterval); warmupSoundInterval=null; } }
+
 function drawMatrix(){
   matrixFrameCount++;
   ctx.fillStyle='rgba(0,0,0,0.05)';
@@ -110,15 +109,12 @@ function drawMatrix(){
     const text = chars.charAt(Math.floor(Math.random()*chars.length));
     ctx.fillText(text,i*fontSize,drops[i]*fontSize);
     if(drops[i]*fontSize>canvas.height){
-      // mark this column as having reached the bottom
-      columnsReachedBottom[i] = true;
-      // small random chance to reset so the effect continues
-      if (Math.random() > 0.975) { drops[i] = 0; }
+      columnsReachedBottom[i]=true;
+      if(Math.random()>0.975){ drops[i]=0; }
     }
     drops[i]++;
   }
-  // once every column reached bottom at least once, mark warmup complete
-  if (!matrixWarmupComplete && columnsReachedBottom.every(Boolean)) {
+  if(!matrixWarmupComplete && columnsReachedBottom.every(Boolean)){
     matrixWarmupComplete = true;
     console.debug('[drawMatrix] matrix warmup: all columns reached bottom');
   }
@@ -126,124 +122,96 @@ function drawMatrix(){
 
 // --- CSV HISTORIE LADEN ---
 let history = [];
-async function loadCSV() {
+async function loadCSV(){
   console.debug('[loadCSV] Start loading history.csv');
   const response = await fetch('history.csv');
   const text = await response.text();
   const lines = text.trim().split('\n');
   console.debug('[loadCSV] CSV loaded, total lines:', lines.length);
 
-  // Chunked parsing to avoid blocking the UI for large files
-  const chunkSize = 200;
-  for (let i = 0; i < lines.length; i += chunkSize) {
-    const end = Math.min(i + chunkSize, lines.length);
-    for (let j = i; j < end; j++) {
-      const line = lines[j];
-      const [date, ...nums] = line.split(',');
-      // defensives Parsen: trim und Number, prüfe auf NaN
-      const main = nums.slice(0,5).map(s => {
-        const v = Number((s||'').trim());
-        return Number.isFinite(v) ? v : NaN;
-      });
-      const euro = nums.slice(5,7).map(s => {
-        const v = Number((s||'').trim());
-        return Number.isFinite(v) ? v : NaN;
-      });
-      // Prüfe, ob die erwarteten Werte vorhanden sind
-      const hasAllMain = main.length === 5 && main.every(Number.isFinite);
-      const hasAllEuro = euro.length === 2 && euro.every(Number.isFinite);
-      if (!hasAllMain || !hasAllEuro) {
-        console.warn('[loadCSV] skipped malformed line', j + 1, 'content:', line);
-        continue; // skip malformed line
+  const chunkSize=200;
+  for(let i=0;i<lines.length;i+=chunkSize){
+    const end=Math.min(i+chunkSize,lines.length);
+    for(let j=i;j<end;j++){
+      const line=lines[j];
+      const [date,...nums]=line.split(',');
+      const main = nums.slice(0,5).map(s=>Number((s||'').trim()));
+      const euro = nums.slice(5,7).map(s=>Number((s||'').trim()));
+      const hasAllMain = main.length===5 && main.every(Number.isFinite);
+      const hasAllEuro = euro.length===2 && euro.every(Number.isFinite);
+      if(!hasAllMain || !hasAllEuro){
+        console.warn('[loadCSV] skipped malformed line', j+1, 'content:', line);
+        continue;
       }
       history.push({main,euro,date});
     }
-    console.debug('[loadCSV] Parsed lines', Math.min(end, lines.length), 'of', lines.length);
-    // yield to the event loop so the UI stays responsive
-    await new Promise(resolve => setTimeout(resolve, 0));
+    console.debug('[loadCSV] Parsed lines', Math.min(end,lines.length),'of',lines.length);
+    await new Promise(resolve=>setTimeout(resolve,0));
   }
   console.debug('[loadCSV] Finished parsing history, history length:', history.length);
 }
 
-// --- MATRIX-DETERMINISTISCHE VORHERSAGE MIT SEED ---
-// Diese Version nutzt ALLE historischen Einträge aus `history`.
-// Für sehr große CSVs wird die Summenberechnung in Chunks ausgeführt
-// (mit kurzen Pausen) damit der Browser nicht einfriert.
-async function generateDeterministicNumbers(drawDateStr, history, seedInput) {
-  console.debug('[generate] start', { drawDateStr, historyLength: history.length, seedProvided: !!seedInput });
+// --- MATRIX-DETERMINISTISCHE VORHERSAGE MIT SEED UND ESOTERIK ---
+async function generateDeterministicNumbers(drawDateStr, history, seedInput){
+  console.debug('[generate] start', {drawDateStr, historyLength: history.length, seedProvided: !!seedInput});
   const drawDate = new Date(drawDateStr);
   const year = drawDate.getFullYear();
-  const month = drawDate.getMonth() + 1;
+  const month = drawDate.getMonth()+1;
   const day = drawDate.getDate();
   const weekday = drawDate.getDay();
 
-  // Berechne die Summe aller bisherigen Ziehungen asynchron in Chunks
-  let prevSum = 0;
+  let prevSum=0;
   const n = history.length;
-  console.debug('[generate] history length =', n);
-  // Wenn history moderat groß ist, mache eine direkte Reduktion (schnell)
-  if (n <= 500) {
-    prevSum = history.reduce((sum, draw) => sum + draw.main.reduce((a,b)=>a+b,0) + draw.euro.reduce((a,b)=>a+b,0), 0);
+  if(n<=500){
+    prevSum = history.reduce((sum, draw)=>sum+draw.main.reduce((a,b)=>a+b,0)+draw.euro.reduce((a,b)=>a+b,0),0);
     console.debug('[generate] prevSum computed (direct):', prevSum);
-  } else {
-    // Chunking für große Arrays: verarbeite z.B. 200 Einträge, dann yield
-    const chunkSize = 200;
-    for (let i = 0; i < n; i += chunkSize) {
-      const end = Math.min(i + chunkSize, n);
-      for (let j = i; j < end; j++) {
-        const draw = history[j];
-        // sichere Summierung: ignoriere nicht-finite Werte (falls doch vorhanden)
-        const mainSum = (draw.main || []).reduce((a,b) => a + (Number.isFinite(b) ? b : 0), 0);
-        const euroSum = (draw.euro || []).reduce((a,b) => a + (Number.isFinite(b) ? b : 0), 0);
-        prevSum += mainSum + euroSum;
-        // Falls irgendwas ungewöhnlich ist, logge die Zeile zur Untersuchung
-        if (!Array.isArray(draw.main) || !Array.isArray(draw.euro) || draw.main.length !==5 || draw.euro.length !==2) {
-          console.warn('[generate] unexpected draw format at index', j, draw);
-        }
+  }else{
+    const chunkSize=200;
+    for(let i=0;i<n;i+=chunkSize){
+      const end=Math.min(i+n, n);
+      for(let j=i;j<end;j++){
+        const draw=history[j];
+        prevSum += draw.main.reduce((a,b)=>a+(Number.isFinite(b)?b:0),0)+draw.euro.reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
       }
-      console.debug('[generate] processed chunk', Math.min(end, n), 'of', n, 'current prevSum:', prevSum);
-      // Kurz pausieren, damit der UI-Thread Events verarbeiten kann
-      // (wichtig bei ~900 Einträgen oder mehr)
-      await new Promise(resolve => setTimeout(resolve, 0));
+      console.debug('[generate] processed chunk', Math.min(end,n), 'of', n, 'current prevSum:', prevSum);
+      await new Promise(resolve=>setTimeout(resolve,0));
     }
     console.debug('[generate] prevSum computed (chunked):', prevSum);
   }
 
-  // Verbesserte Seed-Berechnung die die Position der Zeichen berücksichtigt
-  const seedNum = seedInput ? seedInput.split('').reduce((acc, c, i) => {
-    // Verwende Position (i+1) als Multiplikator und addiere eine Primzahl pro Position
-    return acc + (c.charCodeAt(0) * (i + 1) * 31);
-  }, 0) : 0;
+  const seedNum = seedInput ? seedInput.split('').reduce((acc,c,i)=> acc + (c.charCodeAt(0)*(i+1)*31),0) : 0;
   console.debug('[generate] seedNum =', seedNum);
 
-  const main = [];
-  const euro = [];
+  // --- Esoterische Faktoren aus matrixEsotericFactors.js ---
+  const esoteric = getEsotericSeedComponents(drawDate, seedNum);
+  console.debug('[generate] esoteric values:', esoteric);
 
-  function pseudoRandom(seed, range) {
-    let x = Math.sin(seed) * 10000;
-    return Math.floor(Math.abs(x) % range) + 1;
-  }
+  const main=[], euro=[];
+  function pseudoRandom(seed, range){ let x=Math.sin(seed)*10000; return Math.floor(Math.abs(x)%range)+1; }
 
-  for(let i=0; i<5; i++){
-    const seed = year*10000 + month*100 + day + weekday*7 + prevSum + seedNum + i*37;
+  for(let i=0;i<5;i++){
+    const seed = year*10000 + month*100 + day + weekday*7 + prevSum + seedNum + esoteric.combined + i*37;
     let num = pseudoRandom(seed,50);
-    while(main.includes(num)) num = (num % 50) + 1;
+    while(main.includes(num)) num = (num%50)+1;
     main.push(num);
   }
   console.debug('[generate] main numbers generated (pre-sort):', main);
 
-  for(let i=0; i<2; i++){
-    const seed = year*10000 + month*100 + day + weekday*3 + prevSum + seedNum + i*13;
+  for(let i=0;i<2;i++){
+    const seed = year*10000 + month*100 + day + weekday*3 + prevSum + seedNum + esoteric.combined + i*13;
     let num = pseudoRandom(seed,12);
-    while(euro.includes(num)) num = (num % 12) + 1;
+    while(euro.includes(num)) num = (num%12)+1;
     euro.push(num);
   }
   console.debug('[generate] euro numbers generated (pre-sort):', euro);
 
   main.sort((a,b)=>a-b);
   euro.sort((a,b)=>a-b);
-  return {main,euro};
+  return {main, euro, esoteric};
 }
+
+// --- Weitere bestehende Funktionen (nextDrawDate, typeOutText, animateNumbers, showNumbersStepByStep, Audio, Start Button) unverändert ---
+
 
 function nextDrawDate(){
   const now = new Date();
@@ -337,41 +305,47 @@ async function showNumbersStepByStep(seedInput){
   const nums = await generateDeterministicNumbers(drawDate, history, seedInput);
   console.debug('[show] after generateDeterministicNumbers, nums:', nums);
 
+// === Terminal-Ausgabe der esoterischen Werte ===
+const esoteric = nums.esoteric;
+out.innerHTML += `<span>===== MATRIX-PROGNOSE: EUROJACKPOT =====\n</span>
+<span>⚡ Kosmische Resonanz: ${(esoteric.moonPhase*100).toFixed(2)}%</span>
+<span>🔢 Numerologische Schwingung: ${esoteric.numerology}</span>
+<span>♒ Sternzeichen-Code: ${esoteric.zodiacCode}</span>
+<span>🌀 Planck-Drift: ${esoteric.drift.toFixed(5)}</span>
+<span>📡 Schumann-Frequenz: ${esoteric.schumann.toFixed(2)} Hz</span>
+<span>──────────────────────────────\n\n</span>`;
+
   setTimeout(()=>{
-    typeOutText(out,"# ===== MATRIX-PROGNOSE: EUROJACKPOT =====\n",50,()=>{
+    typeOutText(out,"# Nächste Ziehung: "+drawDateStr,50,()=>{
       setTimeout(()=>{
-        typeOutText(out,"# Nächste Ziehung: "+drawDateStr,50,()=>{
-          setTimeout(()=>{
-            const mainSpan = document.createElement('span');
-            mainSpan.className = 'mainnumbers';
-            mainSpan.textContent = "# Hauptzahlen: ";
-            out.appendChild(mainSpan);
-            const mainNumSpan = document.createElement('span');
-            mainSpan.appendChild(mainNumSpan);
+        const mainSpan = document.createElement('span');
+        mainSpan.className = 'mainnumbers';
+        mainSpan.textContent = "# Hauptzahlen: ";
+        out.appendChild(mainSpan);
+        const mainNumSpan = document.createElement('span');
+        mainSpan.appendChild(mainNumSpan);
+        
+        // Animiere Hauptzahlen
+        animateNumbers(mainNumSpan, nums.main, 2000, () => {
+          setTimeout(() => {
+            const euroSpan = document.createElement('span');
+            euroSpan.className = 'euronumbers';
+            euroSpan.textContent = "# Eurozahlen: ";
+            out.appendChild(euroSpan);
+            const euroNumSpan = document.createElement('span');
+            euroSpan.appendChild(euroNumSpan);
             
-            // Animiere Hauptzahlen
-            animateNumbers(mainNumSpan, nums.main, 2000, () => {
-              setTimeout(() => {
-                const euroSpan = document.createElement('span');
-                euroSpan.className = 'euronumbers';
-                euroSpan.textContent = "# Eurozahlen: ";
-                out.appendChild(euroSpan);
-                const euroNumSpan = document.createElement('span');
-                euroSpan.appendChild(euroNumSpan);
-                
-                // Animiere Eurozahlen
-                animateNumbers(euroNumSpan, nums.euro, 2000, () => {
-                  playVictorySound();
-                  // Entferne alle blinkenden Cursor
-                  document.querySelectorAll('.cursor').forEach(cursor => cursor.remove());
-                });
-              }, 500);
+            // Animiere Eurozahlen
+            animateNumbers(euroNumSpan, nums.euro, 2000, () => {
+              playVictorySound();
+              // Entferne alle blinkenden Cursor
+              document.querySelectorAll('.cursor').forEach(cursor => cursor.remove());
             });
-          },300);
+          }, 500);
         });
       },300);
     });
-  },1500);
+  },300);
 }
 
 // --- AUDIO ---
