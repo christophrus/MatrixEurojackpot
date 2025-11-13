@@ -51,6 +51,19 @@ Oder einfach die Datei `index.html` in einem Browser öffnen, falls Ihr Browser 
    - Text wird zeichenweise getippt (typewriter effect). Die Zahlen selbst werden kurz animiert (rasende Zufallszahlen) und landen dann auf den deterministischen Endwerten.
    - Am Ende spielt ein kurzer Victory-Sound.
 
+  ## Weiere Esoterische Faktoren
+
+Neben der deterministischen Ziehungsvorhersage werden nun zusätzliche „esoterische“ Werte berechnet, die den Seed beeinflussen und optional im Terminal angezeigt werden:
+
+- **Kosmische Resonanz / Mondphase (`moonPhase`)**: Wert zwischen 0 und 1, berechnet aus dem Datum der Ziehung.  
+- **Numerologische Schwingung (`numerology`)**: Quersumme des Ziehungsdatums modulo 9.  
+- **Sternzeichen-Code (`zodiacCode`)**: Numerischer Code für das Sternzeichen des Ziehungsdatums (z. B. 11 = Steinbock).  
+- **Planck-Drift (`drift`)**: Kleine Variation basierend auf Datum, erzeugt subtile Unterschiede im Seed.  
+- **Text-Seed Wert (`textValue`)**: Deterministische Zahl aus dem optionalen Seed-String.  
+- **Schumann-Frequenz (`schumann`)**: Basis 7.83 Hz mit deterministischer Variation durch Tag, Monat und Seed. Wird in Hz ausgegeben und kann für Visualisierung oder erweiterte Seed-Berechnung genutzt werden.  
+
+Diese Werte werden in `matrixEsotericFactors.js` von der Funktion `getEsotericSeedComponents(date, seedString)` berechnet und zurückgegeben.  
+
 ## Wichtige Implementierungsdetails
 - Chunked CSV-Parsing: `loadCSV()` liest die Datei und verarbeitet sie in Blöcken (z.B. 200 Zeilen), mit `await new Promise(r => setTimeout(r,0))` zwischen den Blöcken. Das hält die UI reaktionsfähig.
 - Defensive Parsing & Robustheit: malformed Zeilen in `history.csv` werden übersprungen. Werte werden mit `Number.isFinite` geprüft, damit keine `NaN`-Summen die Deterministik zerstören.
