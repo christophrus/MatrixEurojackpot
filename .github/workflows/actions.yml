@@ -5,36 +5,32 @@ on:
   schedule:
     - cron: '0 22 * * 2,5' # At 22:00 on Tuesday and Friday
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-
       - name: checkout repo content
-        uses: actions/checkout@v2 # checkout the repository content to github runner
+        uses: actions/checkout@v5
 
       - name: setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.11.0' # install the python version needed
-          
+          python-version: '3.11'
+
       - name: install python packages
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
-      - name: execute py script # run history_scraper_update.py
+
+      - name: execute py script
         run: python history_scraper_update.py
-          
-      - name: commit files
+
+      - name: commit and push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git diff-index --quiet HEAD || (git commit -a -m "updated history.csv" --allow-empty)
-          
-      - name: push changes
-        uses: ad-m/github-push-action@v0.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main 
+          git diff-index --quiet HEAD || (git commit -m "updated history.csv" && git push)
